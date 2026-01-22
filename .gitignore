@@ -1,0 +1,9 @@
+# 敏感文件
+.env
+baidu_token.json
+
+# 环境与缓存
+venv/
+.venv/
+__pycache__/
+.DS_Store
