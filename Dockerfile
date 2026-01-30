@@ -9,10 +9,11 @@ ENV PYTHONDONTWRITEBYTECODE=1
 # 确保控制台输出不被缓冲
 ENV PYTHONUNBUFFERED=1
 
-# 安装系统依赖（PyMuPDF 处理图像可能需要）
+# 安装系统依赖（适应新版 Debian 和 ARM 架构）
 RUN apt-get update && apt-get install -y \
     build-essential \
-    libgl1-mesa-glx \
+    libgl1 \
+    libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
 # 复制依赖并安装

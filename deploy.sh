@@ -30,6 +30,11 @@ git pull
 # 4. 构建 Docker 镜像
 echo -e "${GREEN}>>> 构建 Docker 镜像...${NC}"
 docker build -t ${APP_NAME}:latest .
+# 4r. 失败则退出
+if [ $? -ne 0 ]; then
+    echo "❌ 镜像构建失败，请检查 Dockerfile 报错信息。"
+    exit 1
+fi
 
 # 5. 停止并删除旧容器
 if [ "$(docker ps -q -f name=${APP_NAME})" ]; then
@@ -45,7 +50,7 @@ fi
 # 6. 启动新容器
 # -v $(pwd)/baidu_token.json:/app/baidu_token.json 确保授权不过期
 # -v $(pwd)/WM.Feishu.png:/app/WM.Feishu.png 挂载水印文件（如果有）
-echo -e "${GREEN}>>> 启动新容器 (宿主机端口: ${PORT} -> 容器端口: 8501)...${NC}"
+echo -e "${GREEN}>>> 启动新容器 (宿主机端口: ${PORT} )...${NC}"
 docker run -d \
   --name ${APP_NAME} \
   --restart unless-stopped \
