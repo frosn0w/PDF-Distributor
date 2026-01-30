@@ -1,11 +1,18 @@
-# 敏感文件
+# local file
+*.pdf
+WM.*.png
 .env
 baidu_token.json
+run.sh
+
+# Streamlit
+.streamlit/
 
 # Python 缓存与环境
 venv/
 .venv/
 __pycache__/
-.DS_Store
 *.pyc
 .uv/
+temp/
+.DS_Store

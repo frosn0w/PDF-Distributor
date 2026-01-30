@@ -1,24 +1,29 @@
-# 使用轻量级 Python 镜像
-FROM python:3.11-slim
+# 使用官方轻量级 Python 镜像
+FROM python:3.10-slim
 
 # 设置工作目录
 WORKDIR /app
 
-# 安装必要的系统库（PyMuPDF 渲染 PDF 需底层库支持）
+# 防止 Python 生成 .pyc 文件
+ENV PYTHONDONTWRITEBYTECODE=1
+# 确保控制台输出不被缓冲
+ENV PYTHONUNBUFFERED=1
+
+# 安装系统依赖（PyMuPDF 处理图像可能需要）
 RUN apt-get update && apt-get install -y \
     build-essential \
     libgl1-mesa-glx \
     && rm -rf /var/lib/apt/lists/*
 
-# 复制依赖文件并安装
+# 复制依赖并安装
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 复制项目代码和默认水印图
+# 复制项目代码
 COPY . .
 
 # 暴露 Streamlit 默认端口
 EXPOSE 8501
 
 # 启动命令
-CMD ["streamlit", "run", "PDF-Distributor.py", "--server.port=10031", "--server.address=0.0.0.0"]
+CMD ["streamlit", "run", "app.py", "--server.address=0.0.0.0"]
