@@ -183,16 +183,25 @@ class BaiduManager:
 
     def check_exists(self, dir_path, filename):
         """
-        检查文件是否已存在（注意：原代码中未实现此方法）
-        参数:
-            dir_path: 目录路径
-            filename: 文件名
-        返回:
-            存在返回True，否则返回False
+        检查文件是否已存在（真实联网校验版）
         """
-        # 注意：该方法在原代码中被调用但未实现，需要补充实现
-        # 这里仅提供一个空实现，实际使用时需要完成
-        return False
+        try:
+            tk = self.token_data['access_token']
+            # 对中文路径进行转义，防止 URL 报错
+            safe_dir = urllib.parse.quote(dir_path)
+            url = f"{self.api_base}/file?method=list&access_token={tk}&dir={safe_dir}"
+            
+            res = requests.get(url, headers=self.headers, timeout=10).json()
+            
+            if res.get('errno') == 0:
+                # 遍历目录下的文件列表
+                for item in res.get('list', []):
+                    if item['server_filename'] == filename:
+                        return True  # 找到了同名文件
+            return False
+        except Exception as e:
+            # 网络请求失败时，保守起见返回 False，尝试继续上传
+            return False
 
 # --- [3. 水印引擎] ---
 def add_watermark(doc, wm_bytes, rot, w_pct, h_multiplier):
@@ -390,7 +399,7 @@ if main_pdf and st.button("🔥 组装 & 发射", type="primary", use_container_
         # 显示处理状态
         with st.status("🛠️ 正在执行自动化流水线...", expanded=True) as status:
             dt = datetime.now().strftime('%y%m%d')  # 当前日期，用于文件名
-            real_folder = mgr.get_real_folder(app_folder_name)  # 获取真实文件夹名（注意：原代码中未实现此方法）
+            real_folder = app_folder_name
             
             # 创建临时目录存放处理过程中的文件
             with tempfile.TemporaryDirectory() as td:

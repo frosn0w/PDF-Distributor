@@ -2,8 +2,10 @@
 .env
 baidu_token.json
 
-# 环境与缓存
+# Python 缓存与环境
 venv/
 .venv/
 __pycache__/
 .DS_Store
+*.pyc
+.uv/
