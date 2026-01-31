@@ -21,6 +21,7 @@ if [ ! -f baidu_token.json ]; then
     echo "⚠️  未找到 baidu_token.json，创建空文件以持久化授权信息..."
     touch baidu_token.json
     echo "{}" > baidu_token.json
+    chmod 666 baidu_token.json
 fi
 
 # 3. 拉取最新代码

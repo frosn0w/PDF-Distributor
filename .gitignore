@@ -1,18 +1,47 @@
-# local file
-*.pdf
-WM.*.png
+# === 安全与机密 (必须排除) ===
 .env
 baidu_token.json
+# 排除所有 PDF 输出文件，防止误上传分发后的文件
+*.pdf
+
+# === 本地工具与凭据 ===
+# 排除本地运行脚本（包含 export 逻辑）
 run.sh
+# 排除水印源文件
+WM.*.png
 
-# Streamlit
+# === Streamlit 特有 ===
 .streamlit/
+# 排除应用生成的临时缓存目录
+output_cache/
 
-# Python 缓存与环境
-venv/
-.venv/
+# === Python 缓存与环境 ===
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# === 包管理工具 (uv / pip) ===
 .uv/
-temp/
+.python-version
+
+# === 系统与编辑器缓存 ===
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+.vscode/
+.idea/
+
+# === 临时文件 ===
+temp/
+tmp/

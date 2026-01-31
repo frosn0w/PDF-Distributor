@@ -30,7 +30,12 @@ class Config:
         "TOKEN_FILE": "baidu_token.json",
         "RASTER_DPI": 2.5,  # 栅格化倍数，过高会导致 OOM
         "JPG_QUALITY": 80,
-        "TEMP_STAY_DIR": "output_cache" # 全局缓存根目录
+        "TEMP_STAY_DIR": "output_cache", # 全局缓存根目录
+        "WM_CONFIG": {
+            "WIDTH_PCT": 0.6,    # 水印占页面宽度的比例
+            "HEIGHT_MULT": 2.5,  # 纵向间距倍数
+            "MARGIN_Y": 100,     # 上下安全边距
+        }
     }
 
     CHANNEL_DEFAULTS = {
@@ -211,43 +216,43 @@ class PDFProcessor:
     @staticmethod
     def add_watermark(target_pdf_path: Path, output_path: Path, wm_bytes: Optional[bytes], 
                       owner_pw: str, user_pw: str):
-        """添加全屏平铺水印并进行 AES-256 加密"""
         if not os.path.exists(target_pdf_path): return
         
+        # 显式打开文档
         with fitz.open(target_pdf_path) as doc:
             if wm_bytes:
-                # 内存打开图片构造临时 PDF 页作为水印源
                 with fitz.open("png", wm_bytes) as img_doc:
-                    rect = img_doc[0].rect
+                    img_rect = img_doc[0].rect
+                    iw, ih = img_rect.width, img_rect.height
+                    
                     with fitz.open() as wm_pdf_doc:
-                        w_page = wm_pdf_doc.new_page(width=rect.width, height=rect.height)
-                        w_page.insert_image(rect, stream=wm_bytes)
-                        PDFProcessor._apply_tiled_watermark(doc, wm_pdf_doc)
+                        w_page = wm_pdf_doc.new_page(width=iw, height=ih)
+                        w_page.insert_image(img_rect, stream=wm_bytes)
+                        
+                        cfg = Config.APP["WM_CONFIG"]
+                        for page in doc:
+                            vw = page.rect.width * cfg["WIDTH_PCT"]
+                            vh = vw * (ih / iw)
+                            step_y = vh * cfg["HEIGHT_MULT"]
+                            y = cfg["MARGIN_Y"] + vh / 2
+                            
+                            while y <= page.rect.height - cfg["MARGIN_Y"] - vh / 2:
+                                r = fitz.Rect(
+                                    (page.rect.width - vw) / 2, y - vh / 2, 
+                                    (page.rect.width + vw) / 2, y + vh / 2
+                                )
+                                page.show_pdf_page(r, wm_pdf_doc, 0)
+                                y += step_y
+                        # wm_pdf_doc 在 with 结束时自动关闭，不需要手动 close
+                del wm_bytes
             
+            # 保存加密文档
             doc.save(output_path, encryption=fitz.PDF_ENCRYPT_AES_256, 
                      owner_pw=owner_pw, user_pw=user_pw)
-
-    @staticmethod
-    def _apply_tiled_watermark(target_doc, wm_source_doc):
-        """平铺算法"""
-        rot, w_pct, h_mult = -60, 0.6, 2.5
-        iw, ih = wm_source_doc[0].rect.width, wm_source_doc[0].rect.height
-        for page in target_doc:
-            vw = page.rect.width * w_pct
-            vh = vw * (ih / iw)
-            rad = abs(rot) * (math.pi / 180.0)
-            bw = vw * math.cos(rad) + vh * math.sin(rad)
-            bh = vw * math.sin(rad) + vh * math.cos(rad)
-            step_y = bh * h_mult
-            y = 150 + bh/2
-            while y <= page.rect.height - 150 - bh/2:
-                r = fitz.Rect((page.rect.width - bw) / 2, y - bh/2, 
-                              (page.rect.width + bw) / 2, y + bh/2)
-                page.show_pdf_page(r, wm_source_doc, 0, rotate=rot)
-                y += step_y
+            # 让 with 块自动管理生命周期
+        gc.collect()
 
 # --- [2. UI 工具函数] ---
-
 def cleanup_housekeeper():
     """管家机制：自动清理 24 小时前的旧任务目录 """
     base_dir = Path(Config.APP["TEMP_STAY_DIR"])
@@ -367,17 +372,22 @@ def main():
                     st.stop()
 
                 dt_str = datetime.now().strftime('%y%m%d')
+                wm_cache = {} # 初始化缓存
+                
                 for ch in configured_channels:
                     ch_name = ch['meta']['name']
                     status.write(f"🎨 正在生成渠道文件: {ch_name}")
                     
                     wm_bytes = None
+                    # 优先从缓存获取水印，减少磁盘 IO
                     if ch['use_def_wm']:
                         def_path = Config.DEFAULT_WM_PATHS.get(ch['id'])
-                        if def_path and os.path.exists(def_path):
-                            with open(def_path, 'rb') as f: wm_bytes = f.read()
-                        else:
-                            status.write(f"⚠️ 未找到 {ch_name} 默认水印文件，将不加水印")
+                        if def_path:
+                            if def_path not in wm_cache:
+                                if os.path.exists(def_path):
+                                    with open(def_path, 'rb') as f:
+                                        wm_cache[def_path] = f.read()
+                            wm_bytes = wm_cache.get(def_path)
                     elif ch['custom_wm_file']:
                         wm_bytes = ch['custom_wm_file'].getvalue()
                     
