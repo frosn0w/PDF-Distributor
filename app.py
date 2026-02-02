@@ -58,7 +58,7 @@ class Config:
 
     DEFAULT_WM_PATHS = {
         'feishu': 'WM.Feishu.png',
-        'wecom': 'WM.WeCOM.png',
+        'wecom': 'WM.WeCom.png',
         'red': 'WM.Red.png'
     }
 
